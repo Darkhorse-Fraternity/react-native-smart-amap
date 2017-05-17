@@ -299,6 +299,38 @@ RCT_EXPORT_METHOD(searchPoiByCenterCoordinate:(NSDictionary *)params)
     [self.search AMapPOIAroundSearch:request];
 }
 
+RCT_EXPORT_METHOD(searchReGoecodeByCenterCoordinate:(NSDictionary *)params)
+{
+    AMapReGeocodeSearchRequest *request = [[AMapReGeocodeSearchRequest alloc]init];
+ 
+    if(params != nil) {
+        NSArray *keys = [params allKeys];
+        AMapGeoPoint *point = [[AMapGeoPoint alloc]init];
+        //        NSLog(@"searchPoiByCenterCoordinate...");
+       
+        
+//        if([keys containsObject:@"longitude"]) {
+        if([keys containsObject:@"longitude"]){
+            NSString *longitude = [params objectForKey:@"longitude"];
+            point.longitude = [longitude floatValue];
+        }
+    
+        if([keys containsObject:@"latitude"]) {
+            NSString *latitude = [params objectForKey:@"latitude"];
+            point.latitude = [latitude floatValue];
+        }
+        
+        
+       
+        
+        
+        request.location = point;
+    }
+    
+    [self.search AMapReGoecodeSearch:request];
+    
+}
+
 - (NSDictionary *)constantsToExport
 {
     return @{
@@ -653,5 +685,28 @@ RCT_EXPORT_METHOD(searchPoiByCenterCoordinate:(NSDictionary *)params)
                                                  body:result];
 }
 
+
+- (void)onReGeocodeSearchDone:(AMapReGeocodeSearchRequest *)request response:(AMapReGeocodeSearchResponse *)response
+{
+    NSDictionary *result;
+    if (response.regeocode != nil)
+    {
+        result = @{
+                            @"formattedAddress":response.regeocode.formattedAddress,
+                            @"province": response.regeocode.addressComponent.province,
+                            @"city": response.regeocode.addressComponent.city,
+                            @"cityCode": response.regeocode.addressComponent.citycode,
+                            @"township": response.regeocode.addressComponent.township,
+                            @"neighborhood": response.regeocode.addressComponent.neighborhood,
+                            @"building": response.regeocode.addressComponent.building,
+                            @"district": response.regeocode.addressComponent.district
+                            };
+    }
+
+    [self.bridge.eventDispatcher sendAppEventWithName:@"amap.onReGeocodeSearchDone"
+                                                 body:result];
+    
+    
+}
 
 @end

@@ -3,6 +3,11 @@ package com.reactnativecomponent.amap;
 import com.amap.api.maps2d.model.LatLng;
 import com.amap.api.services.core.LatLonPoint;
 import com.amap.api.services.core.PoiItem;
+import com.amap.api.services.geocoder.GeocodeResult;
+import com.amap.api.services.geocoder.GeocodeSearch;
+import com.amap.api.services.geocoder.RegeocodeAddress;
+import com.amap.api.services.geocoder.RegeocodeQuery;
+import com.amap.api.services.geocoder.RegeocodeResult;
 import com.amap.api.services.poisearch.PoiResult;
 import com.amap.api.services.poisearch.PoiSearch;
 import com.facebook.react.bridge.Arguments;
@@ -13,13 +18,16 @@ import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
+
 import java.util.List;
 
 
-public class RCTAMapModule extends ReactContextBaseJavaModule implements PoiSearch.OnPoiSearchListener{
+public class RCTAMapModule extends ReactContextBaseJavaModule implements PoiSearch.OnPoiSearchListener,
+        GeocodeSearch.OnGeocodeSearchListener {
     ReactApplicationContext mContext;
 
     private PoiSearch poiSearch;
+    private GeocodeSearch geocodeSearch;
     private int defaultRadius = 3000;
 
     public RCTAMapModule(ReactApplicationContext reactContext) {
@@ -27,6 +35,8 @@ public class RCTAMapModule extends ReactContextBaseJavaModule implements PoiSear
         mContext = reactContext;
         PoiSearch poiSearch = new PoiSearch(mContext, null);
         this.poiSearch = poiSearch;
+        GeocodeSearch geocodeSearch = new GeocodeSearch(mContext);
+        this.geocodeSearch = geocodeSearch;
     }
 
     @Override
@@ -144,4 +154,51 @@ public class RCTAMapModule extends ReactContextBaseJavaModule implements PoiSear
     public void onPoiItemSearched(PoiItem poiItem, int i) {
 
     }
+
+
+    @ReactMethod
+    public void searchReGoecodeByCenterCoordinate(ReadableMap params) {
+        Double latitude = params.getDouble("latitude") ;
+        Double longtude = params.getDouble("longitude") ;
+        LatLonPoint point = new LatLonPoint(latitude, longtude);
+        RegeocodeQuery query = new RegeocodeQuery(point,1000, GeocodeSearch.AMAP);
+        geocodeSearch.setOnGeocodeSearchListener(this);
+        geocodeSearch.getFromLocationAsyn(query);
+    }
+
+    @Override
+    public void onRegeocodeSearched(RegeocodeResult regeocodeResult, int resultId) {
+
+
+        WritableMap dataMap = Arguments.createMap();
+        if (1000 != resultId) {
+            WritableMap error = Arguments.createMap();
+            error.putString("code", String.valueOf(resultId));
+            dataMap.putMap("error", error);
+
+        }else{
+            RegeocodeAddress address = regeocodeResult.getRegeocodeAddress();
+
+            dataMap.putString("formattedAddress", address.getFormatAddress());
+            dataMap.putString("province",address.getProvince());
+            dataMap.putString("city",address.getCity());
+            dataMap.putString("township",address.getTownship());
+            dataMap.putString("neighborhood",address.getNeighborhood());
+            dataMap.putString("building",address.getBuilding());
+            dataMap.putString("district", address.getDistrict());
+        }
+
+        mContext
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                .emit("amap.onReGeocodeSearchDone", dataMap);
+
+
+
+    }
+
+    @Override
+    public void onGeocodeSearched(GeocodeResult geocodeResult, int resultId) {
+
+    }
 }
+
